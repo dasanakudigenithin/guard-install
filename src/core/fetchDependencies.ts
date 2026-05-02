@@ -9,7 +9,9 @@ import { runDetector as scripts } from "../detectors/scripts";
 const MAX_DEPTH = 2;
 const MAX_NODES = 50;
 const MAX_FANOUT = 10;
+const CONCURRENCY_LIMIT = 5;
 const REQUEST_TIMEOUT = 2500;
+const FETCH_TIMEOUT = 2000;
 
 function getJson(url: string): Promise<any> {
   return new Promise((resolve, reject) => {
@@ -26,6 +28,33 @@ function getJson(url: string): Promise<any> {
   });
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+  ]);
+}
+
+// Controlled parallelism to avoid npm rate limits
+async function runWithLimit<T>(tasks: (() => Promise<T>)[], limit: number): Promise<T[]> {
+  const results: Promise<T>[] = [];
+  const executing: Promise<any>[] = [];
+
+  for (const task of tasks) {
+    const p = task().then((r) => {
+      executing.splice(executing.indexOf(p), 1);
+      return r;
+    });
+    results.push(p);
+    executing.push(p);
+
+    if (executing.length >= limit) {
+      await Promise.race(executing);
+    }
+  }
+  return Promise.all(results);
+}
+
 export type DepScanResult = {
   totalScanned: number;
   highRisk: string[];
@@ -40,9 +69,9 @@ export async function fetchDependencies(pkg: string): Promise<DepScanResult> {
   const highRisk: string[] = [];
   const mediumRisk: string[] = [];
   let maxDepthReached = 0;
-  let totalRiskScore = 0;
+  let normalizedRiskSum = 0;
 
-  await scan(pkg, 0, visited, highRisk, mediumRisk, (d) => { maxDepthReached = Math.max(maxDepthReached, d); }, (s) => { totalRiskScore += s; });
+  await scan(pkg, 0, visited, highRisk, mediumRisk, (d) => { maxDepthReached = Math.max(maxDepthReached, d); }, (s) => { normalizedRiskSum += s; });
 
   return {
     totalScanned: visited.size,
@@ -50,7 +79,7 @@ export async function fetchDependencies(pkg: string): Promise<DepScanResult> {
     mediumRisk,
     tooManyDeps: visited.size > 50,
     deeplyNested: maxDepthReached >= MAX_DEPTH,
-    inheritedScore: Math.min(30, Math.round(totalRiskScore * 0.4)),
+    inheritedScore: Math.min(30, Math.round(normalizedRiskSum * 20)),
   };
 }
 
@@ -77,21 +106,25 @@ async function scan(
 
   const depNames = Object.keys(deps).slice(0, MAX_FANOUT);
 
-  // Parallel lightweight risk checks
-  await Promise.all(depNames.map(async (dep) => {
-    if (visited.has(dep) || visited.size >= MAX_NODES) return;
-    try {
-      const pkgData = await fetchPackage(dep);
-      const results = [recency(pkgData), maintainers(pkgData), scripts(pkgData)];
-      const { totalScore, riskLevel } = computeRiskLevel(results);
-      if (riskLevel === "HIGH") { highRisk.push(dep); onScore(totalScore); }
-      else if (riskLevel === "MEDIUM") { mediumRisk.push(dep); onScore(totalScore); }
-    } catch {}
-  }));
+  // Controlled parallelism for risk checks
+  const tasks = depNames
+    .filter((dep) => !visited.has(dep) && visited.size < MAX_NODES)
+    .map((dep) => async () => {
+      try {
+        const pkgData = await withTimeout(fetchPackage(dep), FETCH_TIMEOUT);
+        const results = [recency(pkgData), maintainers(pkgData), scripts(pkgData)];
+        const { totalScore, riskLevel } = computeRiskLevel(results);
+        if (riskLevel === "HIGH") { highRisk.push(dep); onScore(totalScore / 100); }
+        else if (riskLevel === "MEDIUM") { mediumRisk.push(dep); onScore(totalScore / 100); }
+      } catch {}
+    });
 
-  // Recurse into top deps (sequential)
-  for (const dep of depNames.slice(0, 5)) {
-    if (visited.size >= MAX_NODES) break;
-    await scan(dep, depth + 1, visited, highRisk, mediumRisk, onDepth, onScore);
-  }
+  await runWithLimit(tasks, CONCURRENCY_LIMIT);
+
+  // Parallel recursion (also limited)
+  const recurseTasks = depNames.slice(0, 5)
+    .filter(() => visited.size < MAX_NODES)
+    .map((dep) => () => scan(dep, depth + 1, visited, highRisk, mediumRisk, onDepth, onScore));
+
+  await runWithLimit(recurseTasks, CONCURRENCY_LIMIT);
 }

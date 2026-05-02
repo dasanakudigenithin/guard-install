@@ -2,13 +2,15 @@ import { AnalysisResult, PackageData } from "../types";
 import { computeRiskLevel, computeConfidence, detectAnomaly } from "./score";
 import { fetchDependencies } from "./fetchDependencies";
 import { runDetector as recency } from "../detectors/recency";
+import { runDetector as age } from "../detectors/age";
 import { runDetector as maintainers } from "../detectors/maintainers";
 import { runDetector as scripts } from "../detectors/scripts";
 import { runDetector as downloads } from "../detectors/downloads";
 import { runDetector as typosquat } from "../detectors/typosquat";
+import { runDetector as metadata } from "../detectors/metadata";
 
 export async function analyze(pkgData: PackageData): Promise<AnalysisResult> {
-  const results = [recency, maintainers, scripts, downloads, typosquat].map((fn) => fn(pkgData));
+  const results = [recency, age, maintainers, scripts, downloads, typosquat, metadata].map((fn) => fn(pkgData));
 
   // Anomaly detection
   const anomaly = detectAnomaly(pkgData);
@@ -17,7 +19,6 @@ export async function analyze(pkgData: PackageData): Promise<AnalysisResult> {
   // Dependency scanning
   const depAnalysis = await fetchDependencies(pkgData.name);
 
-  // Add dependency inherited risk
   if (depAnalysis.inheritedScore > 0) {
     results.push({
       name: "dependencies",
@@ -30,7 +31,7 @@ export async function analyze(pkgData: PackageData): Promise<AnalysisResult> {
   const { totalScore, riskLevel } = computeRiskLevel(results);
   const confidence = computeConfidence(pkgData);
 
-  // Build explanation — top contributing factors
+  // Top contributing factors
   const topFactors = results
     .filter((r) => r.score > 0)
     .sort((a, b) => b.score - a.score)

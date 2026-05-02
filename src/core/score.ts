@@ -2,10 +2,12 @@ import { DetectorResult, RiskLevel, Confidence, Weight, PackageData } from "../t
 
 const WEIGHTS: Record<string, Weight> = {
   recency: { max: 40, weight: 1 },
+  age: { max: 30, weight: 1 },
   maintainers: { max: 20, weight: 1 },
   scripts: { max: 80, weight: 1 },
   downloads: { max: 25, weight: 1 },
   typosquat: { max: 60, weight: 1.5 },
+  metadata: { max: 15, weight: 1 },
   dependencies: { max: 30, weight: 1 },
   anomaly: { max: 10, weight: 1 },
 };
@@ -36,7 +38,6 @@ export function computeConfidence(pkgData: PackageData): Confidence {
 }
 
 export function detectAnomaly(pkgData: PackageData): DetectorResult | null {
-  // Suspicious: new version published on a high-download package (possible hijack)
   const modified = pkgData.time[pkgData.latestVersion];
   if (!modified || pkgData.downloads == null) return null;
 

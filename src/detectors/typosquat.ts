@@ -39,7 +39,8 @@ export function runDetector(pkgData: PackageData): DetectorResult {
     const score = bestDist === 1 ? 60 : 40;
     return { name: "typosquat", score, message: `Name is similar to popular package "${bestMatch}" (distance: ${bestDist})`, level: "danger" };
   }
-  if (bestMatch && bestDist === 3) {
+  // Distance 3 only for longer names where it's proportionally small
+  if (bestMatch && bestDist === 3 && name.length >= 6 && Math.abs(name.length - bestMatch.length) <= 1) {
     return { name: "typosquat", score: 30, message: `Name loosely resembles "${bestMatch}" (distance: ${bestDist})`, level: "warn" };
   }
   return { name: "typosquat", score: 0, message: "No typosquat risk detected", level: "info" };

@@ -1,6 +1,6 @@
 import { DetectorResult, PackageData } from "../types";
 
-const DANGEROUS_KEYWORDS = ["curl", "wget", "bash", "sh ", "/bin/sh", "powershell", "eval(", "exec("];
+const DANGEROUS_KEYWORDS = ["curl", "wget", "bash", "sh ", "/bin/sh", "powershell", "nc ", "node -e", "eval(", "exec("];
 
 export function runDetector(pkgData: PackageData): DetectorResult {
   const hasPostinstall = "postinstall" in pkgData.scripts;
@@ -12,31 +12,34 @@ export function runDetector(pkgData: PackageData): DetectorResult {
 
   let score = 0;
   const details: string[] = [];
-  let hasDangerous = false;
 
   if (hasPostinstall) {
     score += 35;
-    const cmd = pkgData.scripts["postinstall"];
-    details.push(`postinstall: "${cmd}"`);
-    const flagged = DANGEROUS_KEYWORDS.filter((kw) => cmd.toLowerCase().includes(kw));
-    if (flagged.length > 0) {
-      hasDangerous = true;
-      details.push(`  ⚡ dangerous keywords: ${flagged.join(", ")}`);
-    }
+    details.push(`postinstall: "${pkgData.scripts["postinstall"]}"`);
   }
-
   if (hasPreinstall) {
     score += 25;
-    const cmd = pkgData.scripts["preinstall"];
-    details.push(`preinstall: "${cmd}"`);
-    const flagged = DANGEROUS_KEYWORDS.filter((kw) => cmd.toLowerCase().includes(kw));
-    if (flagged.length > 0) {
-      hasDangerous = true;
-      details.push(`  ⚡ dangerous keywords: ${flagged.join(", ")}`);
+    details.push(`preinstall: "${pkgData.scripts["preinstall"]}"`);
+  }
+
+  // Keyword content scanning — each hit adds +15
+  let keywordExtra = 0;
+  const flaggedKeywords: string[] = [];
+  for (const hook of ["postinstall", "preinstall"]) {
+    const cmd = pkgData.scripts[hook];
+    if (!cmd) continue;
+    for (const kw of DANGEROUS_KEYWORDS) {
+      if (cmd.toLowerCase().includes(kw) && !flaggedKeywords.includes(kw)) {
+        keywordExtra += 15;
+        flaggedKeywords.push(kw);
+      }
     }
   }
 
-  if (hasDangerous) score += 20;
+  if (flaggedKeywords.length > 0) {
+    score += keywordExtra;
+    details.push(`  ⚡ dangerous keywords: ${flaggedKeywords.join(", ")}`);
+  }
 
   const message = `Install scripts detected:\n     ${details.join("\n     ")}`;
   return { name: "scripts", score, message, level: "danger" };
