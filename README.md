@@ -1,18 +1,36 @@
 # 🛡️ guard-install
 
 [![npm version](https://img.shields.io/npm/v/guard-install.svg)](https://www.npmjs.com/package/guard-install)
-[![downloads](https://img.shields.io/npm/dm/guard-install.svg)](https://www.npmjs.com/package/guard-install)
-[![license](https://img.shields.io/npm/l/guard-install.svg)](./LICENSE)
 
-> **guard-install checks npm packages for risk before you install them.**
+<!-- [![downloads](https://img.shields.io/npm/dm/guard-install.svg)](https://www.npmjs.com/package/guard-install)
+[![license](https://img.shields.io/npm/l/guard-install.svg)](./LICENSE) -->
 
-A zero-backend CLI tool that analyses npm packages for risk **before** installation. No database, no auth, fully local.
+> **Stop installing npm packages blindly.**
+
+**guard-install** checks npm packages for risk **before** you install them. No database, no auth, fully local.
+
+📦 npm: [https://www.npmjs.com/package/guard-install](https://www.npmjs.com/package/guard-install)
+
+---
+
+## 🚀 Try it now
+
+```bash
+npx guard-install axios
+```
+
+Or install globally:
+
+```bash
+npm install -g guard-install
+guard-install axios
+```
 
 ---
 
 ## 🎬 Demo
 
-![demo](./assets/demo.gif)
+![demo](https://github.com/dasanakudigenithin/guard-install/blob/main/assets/demo.gif)
 
 ```bash
 $ npx guard-install axios
@@ -43,26 +61,40 @@ Top Risk Factors:
 
 ---
 
-## 🤔 Why this exists
+## 🔐 Why this exists
 
-npm's ecosystem is under constant **supply chain attack**:
+npm installs packages without any safety checks by default. A single `npm install` can run arbitrary code on your machine via `postinstall` scripts.
 
-- **Postinstall malware** — packages that execute `curl | sh` or download payloads the moment you run `npm install`
-- **Typosquatting** — malicious packages with names like `axois` or `reacct` that steal credentials on install
-- **Hijacked maintainers** — single-maintainer packages are takeover targets (see `event-stream` incident)
+With rising **supply chain attacks** and malicious packages, developers need a way to:
+
+- **Understand** what they are installing
+- **Detect** risky patterns early
+- **Avoid** executing dangerous install scripts
+
+Real threats `guard-install` catches:
+
+- **Postinstall malware** — packages that execute `curl | sh` or download payloads on install
+- **Typosquatting** — malicious packages with names like `axois` or `reacct`
+- **Hijacked maintainers** — single-maintainer packages are takeover targets (see `event-stream`)
 - **Dependency confusion** — internal package names published publicly to poison installs
 
-A single `npm install` can run arbitrary code on your machine via `postinstall` scripts. By the time you realize, it's too late.
-
-`guard-install` catches these signals **before** any code runs.
+`guard-install` adds a safety layer **before** any code runs.
 
 ---
 
-## ⚙️ How it works
+## 🔍 What it does
+
+Before installing a package, guard-install:
 
 1. **Fetches npm metadata** — registry data, download counts, publish history
-2. **Runs risk detectors** — recency, age, maintainers, scripts, downloads, typosquat, metadata anomalies
-3. **Scans dependency tree** — depth-limited (2 levels), parallelized, with concurrency control
+2. **Detects suspicious signals:**
+   - Recent publish activity on new packages
+   - Low maintainer count
+   - Install scripts (`postinstall`, `preinstall`) with dangerous keywords
+   - Low download count
+   - Typosquatting risks
+   - Missing metadata (no repo URL, version churn)
+3. **Scans dependencies** — depth-limited (2 levels), parallelized, with concurrency control
 4. **Computes weighted risk score** — 0-100 with confidence signal
 5. **Explains the risk** — human-readable narrative of why a package is risky
 6. **Installs safely** — always uses `--ignore-scripts` so postinstall malware never executes
@@ -86,19 +118,7 @@ A single `npm install` can run arbitrary code on your machine via `postinstall` 
 
 ---
 
-## 📦 Installation
-
-```bash
-# Use directly (no install needed)
-npx guard-install <package>
-
-# Or install globally
-npm install -g guard-install
-```
-
----
-
-## 🚀 Usage
+## ⚙️ Usage
 
 ```bash
 guard-install <package> [options]
@@ -376,12 +396,24 @@ Exits with code `1` if risk is HIGH — use in CI to block risky installs.
 ## 🏗️ Development
 
 ```bash
-git clone https://github.com/your-username/guard-install.git
+git clone https://github.com/dasanakudigenithin/guard-install
 cd guard-install
 npm install
 npm run build
 node dist/cli/index.js <package>
 ```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome. Feel free to open issues or PRs.
+
+---
+
+## ⚠️ Disclaimer
+
+This tool helps identify potential risks, but does not guarantee complete safety. Always review critical dependencies manually.
 
 ---
 
