@@ -59,6 +59,25 @@ Top Risk Factors:
 ? Proceed with safe install? (y/N)
 ```
 
+### Repository Scanning
+
+![repo-demo](https://github.com/dasanakudigenithin/guard-install/blob/main/assets/repo-demo.gif)
+
+```bash
+$ guard-install --repo https://github.com/axios/axios
+
+🔍 Scanning repository: https://github.com/axios/axios
+
+✔ 200 files scanned
+
+  🌐 Network activity detected
+    → The code makes outbound HTTP requests. This is expected for an HTTP client or API library.
+
+  Risk: LOW — Minor signals detected (likely benign)
+  Verdict: 🟢 Clean
+  Confidence: LOW
+```
+
 ---
 
 ## 🔐 Why this exists
@@ -115,6 +134,7 @@ Before installing a package, guard-install:
 - ⚡ **Caching** — 24h local cache for instant repeat scans (~250ms)
 - 🔐 **Install modes** — `--strict` and `--paranoid` for different security postures
 - 📋 **Project audit** — scan all dependencies in your project at once
+- 🔬 **Repo scanning** — clone and scan git repositories for crypto scams, secret exfiltration, and malicious patterns
 
 ---
 
@@ -134,6 +154,7 @@ guard-install <package> [options]
 | `--explain`     | Show detailed score breakdown                 |
 | `--strict`      | Block HIGH risk packages                      |
 | `--paranoid`    | Block MEDIUM and HIGH risk packages           |
+| `--repo <url>` | Scan a git repository for risky patterns       |
 | `--audit`       | Scan all dependencies in current project      |
 | `--ci`          | CI mode: JSON output, exit 1 on HIGH risk     |
 | `-v, --version` | Show version number                           |
@@ -160,6 +181,9 @@ guard-install axios --paranoid
 
 # Audit entire project
 guard-install --audit
+
+# Scan a git repo for malicious patterns
+guard-install --repo https://github.com/user/suspicious-repo
 
 # CI pipeline
 guard-install axios --ci
@@ -293,6 +317,65 @@ $ guard-install --audit
 
   • esbuild (Install scripts detected: postinstall: "node install.js")
 ```
+
+### Repository scan
+
+```bash
+$ guard-install --repo https://github.com/user/suspicious-repo
+
+🔍 Scanning repository: https://github.com/user/suspicious-repo
+
+✔ 14 files scanned
+
+  🚨 Potential secret exfiltration pattern
+    → The code accesses sensitive data and makes network requests.
+      This combination is commonly used to send private data to external servers.
+
+  💰 Cryptocurrency functionality
+    → Uses crypto/wallet libraries which may interact with sensitive assets.
+
+  Risk: HIGH — Potential private key exfiltration pattern
+  Verdict: 🔴 Risky
+  Confidence: HIGH
+
+  Flagged files:
+    - src/wallet.js
+    - lib/exfil.ts
+
+  ⚠ Do NOT run this code locally without review
+```
+
+### Repository scan (safe library)
+
+```bash
+$ guard-install --repo https://github.com/web3/web3.js
+
+🔍 Scanning repository: https://github.com/web3/web3.js
+
+✔ 200 files scanned
+
+  🔐 Sensitive data patterns found
+    → References to sensitive data patterns (e.g., PRIVATE_KEY, MNEMONIC) were found.
+      These may appear in examples or configuration, but should be reviewed in unfamiliar code.
+
+  💰 Cryptocurrency functionality
+    → Uses crypto/wallet libraries which may interact with sensitive assets.
+
+  Risk: MEDIUM — Combination of signals warrants review
+  Verdict: 🟡 Needs review
+  Confidence: MEDIUM
+
+  🧠 Why this matters:
+    Crypto-related projects may interact with wallets and private keys.
+    Even legitimate libraries should be reviewed before running unfamiliar code.
+```
+
+The repo scanner:
+- Shallow clones (`--depth 1`) into a temp directory
+- Only **reads** files — never runs `npm install`, `node`, or any script
+- Scans for secret access, crypto libraries, network calls, and exfiltration patterns
+- Deletes the clone immediately after scanning
+- Safety bounded: max 200 files, 5KB per file, 6 levels deep, 2s timeout
 
 ### JSON output (CI-friendly)
 

@@ -8,6 +8,7 @@ import os from "os";
 import { fetchPackage } from "../core/fetchPackage";
 import { analyze } from "../core/analyze";
 import { auditProject } from "../core/audit";
+import { scanRepo } from "../core/repoScan";
 import { printReport } from "../utils/logger";
 import { confirmInstall } from "../utils/prompt";
 import { safeInstall } from "../installer/install";
@@ -67,8 +68,15 @@ program
   .option("--strict", "block HIGH risk packages")
   .option("--paranoid", "block MEDIUM and HIGH risk packages")
   .option("--audit", "scan all dependencies in current project")
+  .option("--repo <url>", "scan a git repository for risky patterns")
   .option("--ci", "CI mode: JSON output, exit 1 on HIGH risk")
-  .action(async (packageName: string | undefined, opts: Opts & { audit?: boolean }) => {
+  .action(async (packageName: string | undefined, opts: Opts & { audit?: boolean; repo?: string }) => {
+    // Repo scan mode
+    if (opts.repo) {
+      await scanRepo(opts.repo);
+      return;
+    }
+
     // Audit mode
     if (opts.audit) {
       await auditProject(process.cwd(), opts.json || opts.ci);
