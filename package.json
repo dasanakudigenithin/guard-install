@@ -1,7 +1,7 @@
 {
   "name": "guard-install",
-  "version": "1.0.0",
-  "description": "Analyze npm packages for risk before installation",
+  "version": "1.0.1",
+  "description": "Stop installing npm packages blindly. Pre-install security scanner for npm packages and GitHub repos.",
   "license": "MIT",
   "author": "Nithin D J",
   "main": "dist/cli/index.js",
@@ -16,11 +16,24 @@
     "npm",
     "security",
     "cli",
-    "node",
     "supply-chain",
-    "dependency",
-    "risk-analysis"
+    "scanner",
+    "github",
+    "malware",
+    "audit",
+    "install",
+    "safe",
+    "typosquat",
+    "postinstall"
   ],
+  "homepage": "https://github.com/dasanakudigenithin/guard-install",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dasanakudigenithin/guard-install.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dasanakudigenithin/guard-install/issues"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/cli/index.js"

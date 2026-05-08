@@ -45,6 +45,29 @@ guard-install
 
 ---
 
+## 🔍 Three ways to use it
+
+### Scan a package before installing
+
+```bash
+npx guard-install axios
+```
+
+### Scan a GitHub repo before running
+
+```bash
+npx guard-install --repo https://github.com/user/repo
+```
+
+### Scan & safely install your entire project
+
+```bash
+cd your-project
+npx guard-install
+```
+
+---
+
 ## 🎬 Demo
 
 ![demo](https://github.com/dasanakudigenithin/guard-install/blob/main/assets/demo.gif)
