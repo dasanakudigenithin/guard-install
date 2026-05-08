@@ -1,6 +1,6 @@
 {
   "name": "guard-install",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Analyze npm packages for risk before installation",
   "license": "MIT",
   "author": "Nithin D J",
