@@ -8,6 +8,7 @@ import os from "os";
 import { fetchPackage } from "../core/fetchPackage";
 import { analyze } from "../core/analyze";
 import { auditProject } from "../core/audit";
+import { scanAndInstall } from "../core/scanInstall";
 import { scanRepo } from "../core/repoScan";
 import { printReport } from "../utils/logger";
 import { confirmInstall } from "../utils/prompt";
@@ -84,8 +85,15 @@ program
     }
 
     if (!packageName) {
-      console.log(chalk.red("Error: package name required (or use --audit)"));
-      process.exit(1);
+      // No package specified → auto-detect package.json and scan
+      const pkgPath = path.join(process.cwd(), "package.json");
+      if (fs.existsSync(pkgPath)) {
+        await scanAndInstall(process.cwd(), opts);
+      } else {
+        console.log(chalk.red("Error: package name required, or run in a directory with package.json"));
+        process.exit(1);
+      }
+      return;
     }
 
     // CI mode = JSON + strict exit codes

